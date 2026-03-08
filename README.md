@@ -44,44 +44,26 @@ extension.
 
 _Note: Replace `${TALOS_VERSION}` and `${EXTENSION_VERSION}` with the correct versions._
 
-
-
 ```sh
-
 docker run -t --rm -v .:/work --privileged ghcr.io/siderolabs/imager:v${TALOS_VERSION} \
-
   installer \
-
   --system-extension-image ghcr.io/containdk/talos-registry-extension:${EXTENSION_VERSION}
-
 ```
 
 
 
 This will produce a `installer-amd64.tar` file containing the container image.
-
 It can be loaded into docker using:
 
-
-
 ```sh
-
 docker load -i installer-amd64.tar
-
 ```
-
-
 
 Once loaded, re-tag the image to match your registry and push it:
 
-
-
 ```sh
-
 docker tag ghcr.io/siderolabs/installer-base:v${TALOS_VERSION} your-registry/talos-installer-image:v${TALOS_VERSION}
-
 docker push your-registry/talos-installer-image:v${TALOS_VERSION}
-
 ```
 
 Remember to match the talos versions.

@@ -7,12 +7,12 @@ version: v1alpha1
 metadata:
   name: registry
   version: "${VERSION}-${TALOS_VERSION}"
-  author: Kim Norgaard
+  author: KimNorgaard
   description: |
     [extra] Provides a registry running on the host
   compatibility:
     talos:
-      version: ">= v1.12.4"
+      version: ">= v1.12.0"
 EOF
 
 # Final stage: minimal image
