@@ -1,7 +1,10 @@
 name: registry
 depends:
-  - service: machined
-    condition: running
+  - service: cri
+  - network:
+      - addresses
+      - connectivity
+      - etcfiles
   - configuration: true
 container:
   image: distribution/distribution:3
@@ -13,7 +16,8 @@ container:
     - containerPort: 5001
       hostPort: 5001
   security:
-    readOnlyRootFilesystem: true
+    writeableRootfs: false
+    writeableSysfs: true
   mounts:
     - destination: /var/lib/registry
       type: bind
@@ -27,5 +31,4 @@ container:
       source: /usr/local/etc/registry/config.yml
       options:
         - ro
-restart: untilSuccess
-logToConsole: true
+restart: always
