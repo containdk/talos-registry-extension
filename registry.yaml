@@ -1,0 +1,31 @@
+name: registry
+depends:
+  - service: machined
+    condition: running
+  - configuration: true
+container:
+  image: distribution/distribution:3
+  command:
+    - /bin/registry
+    - serve
+    - /etc/docker/registry/config.yml
+  ports:
+    - containerPort: 5001
+      hostPort: 5001
+  security:
+    readOnlyRootFilesystem: true
+  mounts:
+    - destination: /var/lib/registry
+      type: bind
+      source: /var/lib/registry
+      options:
+        - rbind
+        - rshared
+        - rw
+    - destination: /etc/docker/registry/config.yml
+      type: bind
+      source: /usr/local/etc/registry/config.yml
+      options:
+        - ro
+restart: untilSuccess
+logToConsole: true
