@@ -22,7 +22,6 @@ fi
 
 echo "==> Building and pushing extension to ephemeral registry ($IMAGE_URL:$TAG)"
 docker buildx build --platform "$PLATFORM" \
-    -f Dockerfile \
     --build-arg VERSION="dev" \
     --build-arg TALOS_VERSION="$TALOS_VERSION" \
     -t "$IMAGE_URL:$TAG" \
