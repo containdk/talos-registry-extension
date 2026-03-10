@@ -14,7 +14,7 @@ FULL_VERSION = $(VERSION)-$(TALOS_VERSION)
 
 IMAGE_URL = $(REGISTRY)/$(IMAGE_NAME)
 
-.PHONY: all build push clean check-git-clean check-release-tag
+.PHONY: all build push clean check-git-clean check-release-tag test-local
 
 all: build
 
@@ -58,3 +58,6 @@ clean:
 	@docker rmi $(IMAGE_URL):$(FULL_VERSION) >/dev/null 2>&1 || true
 	@docker rmi $(IMAGE_URL):latest >/dev/null 2>&1 || true
 	@echo "Clean complete."
+
+test-local:
+	./test-local.sh

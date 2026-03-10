@@ -7,14 +7,10 @@ depends:
       - etcfiles
   - configuration: true
 container:
-  image: distribution/distribution:3
-  command:
-    - /bin/registry
+  entrypoint: /bin/registry
+  args:
     - serve
-    - /etc/docker/registry/config.yml
-  ports:
-    - containerPort: 5001
-      hostPort: 5001
+    - /etc/distribution/config.yml
   security:
     writeableRootfs: false
     writeableSysfs: true
@@ -26,9 +22,4 @@ container:
         - rbind
         - rshared
         - rw
-    - destination: /etc/docker/registry/config.yml
-      type: bind
-      source: /usr/local/etc/registry/config.yml
-      options:
-        - ro
 restart: always

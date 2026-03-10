@@ -70,39 +70,36 @@ Remember to match the talos versions.
 
 #### 2. Configure the Service
 
-Once the node is running with the extension, the registry will be available.
-Configuration can be done via the `ExtensionServiceConfig`.
+Once the node is running with the extension, the registry service will start, but it requires a configuration file. This is provided via an `ExtensionServiceConfig` document in your Talos machine configuration.
 
-The registry is configured via a YAML file. The default configuration is to store images on the filesystem at `/var/lib/registry`.
+**Example: Configure the registry via ExtensionServiceConfig**
 
-**Example: Configure a registry with a persistent storage**
-
-To use the default configuration, you don't need to do anything. If you want to customize the configuration, you can use an `ExtensionServiceConfig` to provide a custom `config.yml`.
+You must provide the `config.yml` via the `ExtensionServiceConfig` kind. Add the following YAML document to your machine configuration (or apply it as a patch):
 
 ```yaml
-machine:
-  extensionServices:
-    - name: registry
-      image: ghcr.io/containdk/talos-registry-extension:${EXTENSION_VERSION}
-      configFiles:
-        - content: |
-            version: 0.1
-            log:
-              fields:
-                service: registry
-            storage:
-              cache:
-                blobdescriptor: inmemory
-              filesystem:
-                rootdirectory: /var/lib/registry
-            http:
-              addr: :5001
-              headers:
-                X-Content-Type-Options: [nosniff]
-            health:
-              storagedriver:
-                enabled: true
-                interval: 10s
-                threshold: 3
-          mountPath: /usr/local/etc/registry/config.yml
+---
+apiVersion: v1alpha1
+kind: ExtensionServiceConfig
+name: registry
+configFiles:
+  - mountPath: /etc/distribution/config.yml
+    content: |
+      version: 0.1
+      log:
+        fields:
+          service: registry
+      storage:
+        cache:
+          blobdescriptor: inmemory
+        filesystem:
+          rootdirectory: /var/lib/registry
+      http:
+        addr: :5001
+        headers:
+          X-Content-Type-Options: [nosniff]
+      health:
+        storagedriver:
+          enabled: true
+          interval: 10s
+          threshold: 3
 ```
