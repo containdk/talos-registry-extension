@@ -7,10 +7,10 @@ depends:
       - etcfiles
   - configuration: true
 container:
-  entrypoint: /bin/registry
+  entrypoint: /bin/zot
   args:
     - serve
-    - /etc/distribution/config.yml
+    - /etc/zot/config.json
   security:
     writeableRootfs: false
     writeableSysfs: true

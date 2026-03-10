@@ -15,25 +15,22 @@ metadata:
       version: ">= v1.12.0"
 EOF
 
-RUN mkdir -p /rootfs/usr/local/lib/containers/registry/etc/registry \
-             /rootfs/usr/local/lib/containers/registry/var/lib/registry \
- && touch /rootfs/usr/local/lib/containers/registry/etc/registry/.keep \
- && touch /rootfs/usr/local/lib/containers/registry/var/lib/registry/.keep
-
 # Grab the official image to cherry-pick the static binary and certificates
-FROM distribution/distribution:3 AS dist
+FROM ghcr.io/project-zot/zot-minimal:v2.1.15 AS dist
 
 # Final stage: minimal image
 FROM scratch
+ARG TARGETARCH
 
 # Copy the generated manifest
 COPY --from=manifest /manifest.yaml /manifest.yaml
-
 # Copy the extension service definition
 COPY registry.yaml /rootfs/usr/local/etc/containers/registry.yaml
-# Create mount points in the container rootfs
-COPY --from=manifest /rootfs/usr/local/lib/containers/registry /rootfs/usr/local/lib/containers/registry
-
-# Copy only the statically linked Go binary and CA certificates into the Talos service rootfs
-COPY --from=dist /bin/registry /rootfs/usr/local/lib/containers/registry/bin/registry
+# zot-minimal is dynamically linked, so we need to copy the entire lib directory
+COPY --from=dist /lib/ /rootfs/usr/local/lib/containers/registry/lib/
+# Copy default zot config
+COPY --from=dist /etc/zot/config.json /rootfs/usr/local/lib/containers/registry/etc/zot/config.json
+# Copy the CA certificates
 COPY --from=dist /etc/ssl/certs/ca-certificates.crt /rootfs/usr/local/lib/containers/registry/etc/ssl/certs/ca-certificates.crt
+# Copy the zot binary
+COPY --from=dist /usr/local/bin/zot-linux-${TARGETARCH}-minimal /rootfs/usr/local/lib/containers/registry/bin/zot

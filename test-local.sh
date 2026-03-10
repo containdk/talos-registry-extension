@@ -5,6 +5,8 @@ TALOS_VERSION=${TALOS_VERSION:-v1.12.4}
 UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 IMAGE_URL="ttl.sh/${UUID}/talos-registry-extension"
 TAG="2h"
+CIDR=${CIDR:-192.168.1.0/24}
+ENDPOINT="${ENDPOINT:-192.168.1.2}"
 
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
@@ -20,7 +22,8 @@ fi
 
 echo "==> Building and pushing extension to ephemeral registry ($IMAGE_URL:$TAG)"
 docker buildx build --platform "$PLATFORM" \
-    --build-arg VERSION="0.1.0" \
+    -f Dockerfile \
+    --build-arg VERSION="dev" \
     --build-arg TALOS_VERSION="$TALOS_VERSION" \
     -t "$IMAGE_URL:$TAG" \
     --push .
@@ -47,6 +50,8 @@ INSTALLER_IMAGE="ttl.sh/${UUID}/talos-installer:$TAG"
 docker tag "$TALOS_IMAGE" "$INSTALLER_IMAGE"
 docker push "$INSTALLER_IMAGE"
 
+echo "===> Pushed: $INSTALLER_IMAGE"
+
 CLUSTER_NAME="reg-test"
 
 cat <<EOF > build/patch.yaml
@@ -57,32 +62,30 @@ apiVersion: v1alpha1
 kind: ExtensionServiceConfig
 name: registry
 configFiles:
-  - mountPath: /etc/distribution/config.yml
+  - mountPath: /etc/zot/config.json
     content: |
-      version: 0.1
-      log:
-        fields:
-          service: registry
-      storage:
-        cache:
-          blobdescriptor: inmemory
-        filesystem:
-          rootdirectory: /var/lib/registry
-      http:
-        addr: :5001
-        headers:
-          X-Content-Type-Options: [nosniff]
-      health:
-        storagedriver:
-          enabled: true
-          interval: 10s
-          threshold: 3
+      {
+        "storage": {
+          "rootDirectory": "/var/lib/registry",
+          "dedupe": true,
+          "gc": true,
+          "gcInterval": "24h"
+        },
+        "http": {
+          "address": "0.0.0.0",
+          "port": "5001",
+          "compat": ["docker2s2"]
+        },
+        "log": {
+          "level": "debug"
+        }
+      }
 EOF
 
 echo "==> Creating Talos dev (QEMU) cluster ($CLUSTER_NAME)"
 sudo -E talosctl cluster create dev \
     --name "$CLUSTER_NAME" \
-    --cidr "192.168.1.0/24" \
+    --cidr "$CIDR" \
     --arch "$PLATARCH" \
     --uki-path "https://github.com/siderolabs/talos/releases/download/${TALOS_VERSION}/metal-${PLATARCH}-uki.efi" \
     --install-image "$INSTALLER_IMAGE" \
@@ -92,7 +95,7 @@ sudo -E talosctl cluster create dev \
 
 sudo chown -R $(id -u):$(id -g) ${HOME}/.talos
 
-sudo talosctl config nodes 10.5.0.2
+sudo talosctl config nodes $ENDPOINT
 
 echo "==> Waiting for extension service 'ext-registry' to be Running..."
 set +e
@@ -107,9 +110,9 @@ for i in {1..30}; do
 done
 set -e
 
-echo "==> Testing the registry endpoint via HTTP on node 10.5.0.2"
-if curl -s http://10.5.0.2:5001/v2/ > /dev/null; then
-    echo -e "\nSUCCESS: Registry responded on http://10.5.0.2:5001/v2/"
+echo "==> Testing the registry endpoint via HTTP on node $ENDPOINT"
+if curl -s http://$ENDPOINT:5001/v2/ > /dev/null; then
+    echo -e "\nSUCCESS: Registry responded on http://$ENDPOINT:5001/v2/"
 else
     echo -e "\nFAILED: Registry did not respond as expected."
     sudo talosctl service ext-registry || true
@@ -121,6 +124,11 @@ if [ "${CLEANUP:-true}" = "true" ]; then
     echo "==> Cleaning up..."
     sudo talosctl cluster destroy --name "$CLUSTER_NAME"
     rm -rf build/
+else
+    echo "==> Skipping cleanup."
+    echo "To clean up manually, run:"
+    echo "  sudo talosctl cluster destroy --name $CLUSTER_NAME"
+    echo "  rm -rf build/"
 fi
 
 echo "==> DONE"

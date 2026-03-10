@@ -1,0 +1,67 @@
+---
+apiVersion: v1alpha1
+kind: ExtensionServiceConfig
+name: registry
+configFiles:
+  - mountPath: /etc/zot/config.json
+    content: |
+      {
+        "storage": {
+          "rootDirectory": "/var/lib/registry",
+          "dedupe": true,
+          "gc": true,
+          "gcInterval": "24h"
+        },
+        "http": {
+          "address": "0.0.0.0",
+          "port": "5001",
+          "compat": ["docker2s2"],
+          "tls": {
+            "cert": "/etc/zot/certs/server.cert",
+            "key": "/etc/zot/certs/server.key"
+          },
+          "auth": {
+            "htpasswd": {
+              "path": "/etc/zot/htpasswd"
+            },
+            "failDelay": 5
+          },
+          "accessControl": {
+            "repositories": {
+              "**": {
+                "policies": [
+                  {
+                    "users": ["robot"],
+                    "actions": ["create", "read", "update", "delete"]
+                  }
+                ],
+                "anonymousPolicy": ["read"],
+                "defaultPolicy": ["read"]
+              }
+            }
+          }
+        },
+        "log": {
+          "level": "info"
+        }
+      }
+
+  # Injecting an htpasswd file for Basic Authentication
+  # Generate locally with: htpasswd -bBn <username> <password>
+  - mountPath: /etc/zot/htpasswd
+    content: |
+      robot:$2y$05$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+  # Injecting a TLS Certificate
+  - mountPath: /etc/zot/certs/server.cert
+    content: |
+      -----BEGIN CERTIFICATE-----
+      MIIB...
+      -----END CERTIFICATE-----
+
+  # Injecting a TLS Private Key
+  - mountPath: /etc/zot/certs/server.key
+    content: |
+      -----BEGIN PRIVATE KEY-----
+      MIGH...
+      -----END PRIVATE KEY-----

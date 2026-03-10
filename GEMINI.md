@@ -8,7 +8,9 @@ As a platform engineer, I need a highly resilient container registry that is ava
 
 ## Technical Overview
 
-This project involves creating a custom Talos extension to run a container registry as a system service directly on the Talos nodes. The implementation will use the standard Docker Distribution registry image (`distribution/distribution`).
+This project involves creating a custom Talos extension to run a container registry as a system service directly on the Talos nodes. The implementation will use the Zot minimal registry image (`ghcr.io/project-zot/zot-minimal`).
+
+*Note: We use the `zot-minimal` image because we do not need the extra Zot extensions. If extensions are needed, Zot should be compiled with only those specific extensions enabled. See the [Zot Security Posture documentation](https://zotregistry.dev/v2.1.15/articles/security-posture/).*
 
 The extension will ensure the registry is started by the Talos service manager (`machined`), making it independent of the Kubernetes control plane. This approach guarantees that the registry is available early in the node boot process, allowing the kubelet and other core Kubernetes components to pull necessary images without relying on a running in-cluster scheduler or networking.
 
@@ -16,7 +18,7 @@ The configuration for the registry (e.g., storage backend) will be managed via t
 
 ## Acceptance Criteria
 
-*   A new Talos extension is created for the Docker Distribution registry.
+*   A new Talos extension is created for the Zot registry.
 *   The extension is configured to run the registry as a system service on management cluster nodes.
 *   The registry starts successfully on boot, independent of the Kubernetes cluster state.
 *   Kubelet and other components can pull images from this node-local registry.
