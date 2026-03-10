@@ -100,14 +100,16 @@ sudo -E talosctl cluster create dev \
 
 sudo chown -R $(id -u):$(id -g) ${HOME}/.talos
 
-sudo talosctl config endpoint $ENDPOINT
-sudo talosctl config node $ENDPOINT
+TALOSCONFIG="${HOME}/.talos/config"
+
+talosctl --talosconfig "$TALOSCONFIG" config endpoint $ENDPOINT
+talosctl --talosconfig "$TALOSCONFIG" config node $ENDPOINT
 
 echo "==> Waiting for extension service 'ext-registry' to be Running..."
 set +e
 for i in {1..30}; do
     # When an extension is loaded by Talos, it prefixes the service name with `ext-`
-    STATE=$(sudo talosctl get service ext-registry -o json | jq '.spec.running // "unknown"')
+    STATE=$(talosctl --talosconfig "$TALOSCONFIG" get service ext-registry -o json | jq '.spec.running // "unknown"')
     if [ "$STATE" = "true" ]; then
         echo "Service is Running!"
         break
@@ -121,14 +123,14 @@ if curl -s http://$ENDPOINT:5001/v2/ > /dev/null; then
     echo -e "\nSUCCESS: Registry responded on http://$ENDPOINT:5001/v2/"
 else
     echo -e "\nFAILED: Registry did not respond as expected."
-    sudo talosctl service ext-registry || true
-    sudo talosctl logs ext-registry || true
+    talosctl --talosconfig "$TALOSCONFIG" service ext-registry || true
+    talosctl --talosconfig "$TALOSCONFIG" logs ext-registry || true
     exit 1
 fi
 
 if [ "${CLEANUP:-true}" = "true" ]; then
     echo "==> Cleaning up..."
-    sudo talosctl cluster destroy --name "$CLUSTER_NAME"
+    sudo -E talosctl cluster destroy --name "$CLUSTER_NAME"
     rm -rf build/
 else
     echo "==> Skipping cleanup."
