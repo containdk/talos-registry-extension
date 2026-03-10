@@ -55,7 +55,8 @@ jobs:
       - name: Set up QEMU
         if: steps.verify.outputs.proceed == 'true'
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
-        platforms: amd64,arm64
+        with:
+          platforms: amd64,arm64
 
       - name: Set up Docker Buildx
         if: steps.verify.outputs.proceed == 'true'
