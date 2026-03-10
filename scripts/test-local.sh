@@ -100,7 +100,8 @@ sudo -E talosctl cluster create dev \
 
 sudo chown -R $(id -u):$(id -g) ${HOME}/.talos
 
-sudo talosctl config nodes $ENDPOINT
+sudo talosctl config endpoint $ENDPOINT
+sudo talosctl config node $ENDPOINT
 
 echo "==> Waiting for extension service 'ext-registry' to be Running..."
 set +e
