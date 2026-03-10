@@ -61,3 +61,6 @@ clean:
 
 test-local:
 	TALOS_VERSION=$(TALOS_VERSION) ./test-local.sh
+
+destroy-test-local:
+	@sudo talosctl cluster destroy --name reg-test
