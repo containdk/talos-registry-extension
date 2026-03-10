@@ -56,6 +56,12 @@ CLUSTER_NAME="reg-test"
 cat <<EOF > build/patch.yaml
 cluster:
   allowSchedulingOnControlPlanes: true
+machine:
+  files:
+    - op: create
+      path: /var/mnt/zot-registry/.keep
+      permissions: 0644
+      content: ""
 ---
 apiVersion: v1alpha1
 kind: ExtensionServiceConfig

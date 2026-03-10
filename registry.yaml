@@ -6,6 +6,7 @@ depends:
       - connectivity
       - etcfiles
   - configuration: true
+  - path: /var/mnt/zot-registry
 container:
   entrypoint: /bin/zot
   args:
@@ -17,7 +18,7 @@ container:
   mounts:
     - destination: /var/lib/registry
       type: bind
-      source: /var/lib/registry
+      source: /var/mnt/zot-registry
       options:
         - rbind
         - rshared

@@ -111,6 +111,39 @@ configFiles:
       }
 ```
 
+### Storage Configuration
+
+Because the extension runs isolated via `runC`, Zot expects its storage to exist
+at `/var/lib/registry` inside the container. You must define this exact path
+in your `config.json` under `storage.rootDirectory`.
+
+However, the extension explicitly requires external storage to be mounted on the
+Talos host OS at `/var/mnt/zot-registry`. The extension will not start until
+this path exists.
+
+To satisfy this requirement, you have two options:
+
+#### Option 1: Use a dedicated disk (Recommended)
+
+Define a standard Talos `machine.volumes` configuration (such as
+`UserVolumeConfig` or `ExistingVolumeConfig`) and name the volume
+`zot-registry`. Talos will automatically format and mount this volume to
+`/var/mnt/zot-registry` before the extension starts.
+
+#### Option 2: Use the root ephemeral disk
+
+If you do not want a dedicated disk and simply want to use the node's ephemeral
+storage, you must use a `machine.files` configuration to create the directory on
+the host OS:
+
+```yaml
+machine:
+  files:
+    - path: /var/mnt/zot-registry
+      op: create
+      permissions: 0755
+```
+
 ### Advanced Zot Configuration
 
 Zot supports various advanced configurations directly in the `config.json`.
