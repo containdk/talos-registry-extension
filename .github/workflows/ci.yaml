@@ -20,6 +20,9 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
 
+      - name: Install QEMU System Packages
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 qemu-kvm
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
