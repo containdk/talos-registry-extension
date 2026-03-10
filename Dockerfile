@@ -1,5 +1,5 @@
 # Use a temporary alpine image to generate the manifest
-FROM alpine AS manifest
+FROM alpine@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS manifest
 ARG VERSION
 ARG TALOS_VERSION
 RUN cat > /manifest.yaml <<EOF
@@ -16,7 +16,7 @@ metadata:
 EOF
 
 # Grab the official image to cherry-pick the static binary and certificates
-FROM ghcr.io/project-zot/zot-minimal:v2.1.15 AS dist
+FROM ghcr.io/project-zot/zot-minimal:v2.1.15@sha256:346cefc8dd90c6ffe1e714460ba4bb5f867eacae9b40ca87da3c2e7e034ad31a AS dist
 
 # Final stage: minimal image
 FROM scratch
