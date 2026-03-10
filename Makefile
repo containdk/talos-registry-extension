@@ -60,4 +60,4 @@ clean:
 	@echo "Clean complete."
 
 test-local:
-	./test-local.sh
+	TALOS_VERSION=$(TALOS_VERSION) ./test-local.sh

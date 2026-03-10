@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TALOS_VERSION=${TALOS_VERSION:-v1.12.4}
+TALOS_VERSION=${TALOS_VERSION:?TALOS_VERSION must be set}
 UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 IMAGE_URL="ttl.sh/${UUID}/talos-registry-extension"
 TAG="2h"
