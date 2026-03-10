@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Build & Test Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Extract Talos Version from Makefile
+        id: talos-version
+        run: |
+          TALOS_VERSION=$(grep -E '^TALOS_VERSION \?=' Makefile | awk '{print $3}')
+          echo "TALOS_VERSION=$TALOS_VERSION" >> $GITHUB_ENV
+          echo "version=$TALOS_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Install talosctl
+        run: |
+          curl -sLo talosctl https://github.com/siderolabs/talos/releases/download/${{ steps.talos-version.outputs.version }}/talosctl-linux-amd64
+          chmod +x talosctl
+          sudo mv talosctl /usr/local/bin/
+
+      - name: Run Local Test Script
+        run: |
+          make test-local
+        env:
+          CLEANUP: "true"
