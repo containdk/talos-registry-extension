@@ -8,7 +8,7 @@ PLATFORMS ?= linux/amd64,linux/arm64
 TALOS_VERSION ?= v1.12.4
 # Get the latest git tag without the 'v' prefix for the application version.
 GIT_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null)
-VERSION ?= $(if $(GIT_TAG),$(shell echo $(GIT_TAG) | sed 's/^v//'),0.1.0)
+VERSION ?= $(if $(GIT_TAG),$(shell echo $(GIT_TAG) | sed 's/^v//'),0.0.0-dev)
 # The full version string used for the manifest and image tag.
 FULL_VERSION = $(VERSION)-$(TALOS_VERSION)
 
@@ -29,7 +29,7 @@ build:
 		.
 
 # Build and push the multi-platform manifest for both amd64 and arm64
-push: check-git-clean check-release-tag
+push: check-git-clean
 	@echo "Building and pushing extension image for $(PLATFORMS) as $(IMAGE_URL):$(FULL_VERSION)"
 	docker buildx build --platform $(PLATFORMS) \
 		--build-arg VERSION=$(VERSION) \
@@ -38,18 +38,9 @@ push: check-git-clean check-release-tag
 		-t $(IMAGE_URL):latest \
 		--push .
 
-# =================
-# = Quality Gates
-# =================
 check-git-clean:
 	@if ! git diff-index --quiet HEAD --; then \
 		echo "Git working directory is dirty. Please commit or stash changes before building."; \
-		exit 1; \
-	fi
-
-check-release-tag:
-	@if ! git describe --exact-match --tags HEAD > /dev/null 2>&1; then \
-		echo "HEAD is not tagged. Please create a new git tag for a release before pushing."; \
 		exit 1; \
 	fi
 

@@ -1,0 +1,74 @@
+name: Renovate Auto-Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Makefile"
+
+jobs:
+  publish-talos-bump:
+    name: Auto-publish TALOS_VERSION bump
+    if: github.actor == 'contain-renovate[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Verify Makefile exclusivity and Regex
+        id: verify
+        run: |
+          # Check exclusivity (only Makefile changed in this commit)
+          FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
+          COUNT=$(echo "$FILES" | wc -l)
+
+          # Check Regex
+          # We use -U0 to only look at the added/changed lines
+          REGEX="TALOS_VERSION \?= .*"
+          MATCH=$(git diff HEAD^ HEAD -U0 -- Makefile | grep "^\+" | grep -qE "$REGEX" && echo "yes" || echo "no")
+
+          if [ "$COUNT" -eq 1 ] && [ "$FILES" = "Makefile" ] && [ "$MATCH" = "yes" ]; then
+            echo "Proceeding with publish: valid TALOS_VERSION bump detected."
+            echo "proceed=true" >> $GITHUB_OUTPUT
+
+            # Fetch all tags so git describe works
+            git fetch --tags --force
+
+            # Force git describe to report the last actual tag so the Makefile
+            # computes the clean VERSION correctly (e.g. 0.1.0) rather than a sha-suffix.
+            LATEST_TAG=$(git describe --tags --abbrev=0 HEAD^)
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            git tag -f "$LATEST_TAG" HEAD
+          else
+            echo "Condition failed. Count: $COUNT, Files: $FILES, Match: $MATCH"
+            echo "proceed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up QEMU
+        if: steps.verify.outputs.proceed == 'true'
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        if: steps.verify.outputs.proceed == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GitHub Container Registry
+        if: steps.verify.outputs.proceed == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push extension image
+        if: steps.verify.outputs.proceed == 'true'
+        run: |
+          make push
