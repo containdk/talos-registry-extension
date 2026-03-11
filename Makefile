@@ -5,7 +5,7 @@ IMAGE_NAME ?= talos-registry-extension
 PLATFORMS ?= linux/amd64,linux/arm64
 
 # Default Talos version to build against. Can be overridden.
-TALOS_VERSION ?= v1.12.4
+TALOS_VERSION ?= v1.12.5
 # Get the latest git tag without the 'v' prefix for the application version.
 GIT_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null)
 VERSION ?= $(if $(GIT_TAG),$(shell echo $(GIT_TAG) | sed 's/^v//'),0.0.0-dev)
