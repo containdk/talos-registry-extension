@@ -12,7 +12,7 @@ metadata:
     [extra] Provides a registry running on the host
   compatibility:
     talos:
-      version: ">= v1.12.0"
+      version: ">= v1.13.0"
 EOF
 
 # Grab the official image to cherry-pick the static binary and certificates
