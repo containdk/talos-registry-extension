@@ -7,12 +7,12 @@ version: v1alpha1
 metadata:
   name: registry
   version: "${VERSION}-${TALOS_VERSION}"
-  author: KimNorgaard
+  author: Netic
   description: |
     [extra] Provides a registry running on the host
   compatibility:
     talos:
-      version: ">= v1.13.5"
+      version: ">= v1.13.0"
 EOF
 
 # Grab the official image to cherry-pick the static binary and certificates
