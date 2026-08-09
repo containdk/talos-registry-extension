@@ -8,10 +8,7 @@ depends:
   - configuration: true
   - path: /var/mnt/zot-registry
 container:
-  entrypoint: /bin/zot
-  args:
-    - serve
-    - /etc/zot/config.json
+  entrypoint: /bin/zot-start.sh
   security:
     writeableRootfs: false
     writeableSysfs: true
