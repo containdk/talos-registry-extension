@@ -1,11 +1,17 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>containdk/renovate-config"],
+  "extends": [
+    "local>containdk/renovate-config"
+  ],
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["(^|/)Makefile$"],
-      "matchStrings": ["TALOS_VERSION \\?= (?<currentValue>.*?)\\n"],
+      "managerFilePatterns": [
+        "/(^|/)Makefile$/"
+      ],
+      "matchStrings": [
+        "TALOS_VERSION \\?= (?<currentValue>.*?)\\n"
+      ],
       "depNameTemplate": "siderolabs/talos",
       "datasourceTemplate": "github-releases"
     }
