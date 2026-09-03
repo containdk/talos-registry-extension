@@ -11,13 +11,7 @@ available in every node in the cluster.
 
 This project is implemented as a Talos [System
 Extension](https://docs.siderolabs.com/talos/overview/what-is-talos). It runs
-the minimal Zot container image (`project-zot/zot-minimal`).
-
-_Note: We use the `zot-minimal` image because we do not need the extra Zot
-extensions. If extensions are needed in the future, Zot should be compiled with
-only those specific extensions enabled instead of using the full `zot` image.
-See the [Zot Security Posture
-documentation](https://zotregistry.dev/v2.1.15/articles/security-posture/)._
+the Zot container image (`project-zot/zot`).
 
 The extension ensures the registry is started early in the node boot process,
 making it independent of the Kubernetes control plane. This allows `kubelet` and
