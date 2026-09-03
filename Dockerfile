@@ -1,5 +1,5 @@
 # Use a temporary alpine image to generate the manifest
-FROM alpine@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS manifest
+FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS manifest
 ARG VERSION
 ARG TALOS_VERSION
 RUN cat > /manifest.yaml <<EOF
@@ -19,7 +19,7 @@ EOF
 FROM ghcr.io/project-zot/zot:v2.1.20@sha256:542e25be4d32e7879c0cfad93492a93c81b1e059cbd2d30d485d4bd567318234 AS dist
 
 # Intermediate stage to normalize library paths across architectures
-FROM alpine@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS normalizer
+FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS normalizer
 COPY --from=dist / /dist/
 RUN mkdir -p /normalized/lib /normalized/lib64 && \
     cp -a /dist/lib/. /normalized/lib/ && \
