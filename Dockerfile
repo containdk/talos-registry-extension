@@ -1,5 +1,5 @@
 # Use a temporary alpine image to generate the manifest
-FROM alpine@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS manifest
+FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS manifest
 ARG VERSION
 ARG TALOS_VERSION
 RUN cat > /manifest.yaml <<EOF
@@ -7,22 +7,22 @@ version: v1alpha1
 metadata:
   name: registry
   version: "${VERSION}-${TALOS_VERSION}"
-  author: KimNorgaard
+  author: Netic
   description: |
     [extra] Provides a registry running on the host
   compatibility:
     talos:
-      version: ">= v1.13.0"
+      version: ">= v1.14.0"
 EOF
 
 # Grab the official image to cherry-pick the static binary and certificates
-FROM ghcr.io/project-zot/zot-minimal:v2.1.15@sha256:346cefc8dd90c6ffe1e714460ba4bb5f867eacae9b40ca87da3c2e7e034ad31a AS dist
+FROM ghcr.io/project-zot/zot:v2.1.20@sha256:542e25be4d32e7879c0cfad93492a93c81b1e059cbd2d30d485d4bd567318234 AS dist
 
 # Get static busybox
 FROM busybox:stable-musl AS busybox
 
 # Intermediate stage to normalize library paths and setup busybox/script
-FROM alpine@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS builder
+FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS builder
 COPY --from=dist / /dist/
 RUN mkdir -p /normalized/lib /normalized/lib64 && \
     cp -a /dist/lib/. /normalized/lib/ && \
@@ -39,7 +39,7 @@ RUN for tool in sh wget kill sleep echo grep sed head; do \
 COPY scripts/zot-start.sh /rootfs/bin/zot-start.sh
 RUN chmod +x /rootfs/bin/zot-start.sh
 
-# Final stage: minimal image
+# Final stage: image
 FROM scratch
 ARG TARGETARCH
 
@@ -54,7 +54,7 @@ ARG SERVICE_ROOT=/rootfs/usr/local/lib/containers/registry
 # Copy busybox and symlinks
 COPY --from=builder /rootfs/bin/ ${SERVICE_ROOT}/bin/
 
-# zot-minimal is dynamically linked, so we need to copy the normalized lib directories
+# zot is dynamically linked, so we need to copy the normalized lib directories
 COPY --from=builder /normalized/lib/ ${SERVICE_ROOT}/lib/
 COPY --from=builder /normalized/lib64/ ${SERVICE_ROOT}/lib64/
 # Copy default zot config
@@ -62,4 +62,4 @@ COPY --from=dist /etc/zot/config.json ${SERVICE_ROOT}/etc/zot/config.json
 # Copy the CA certificates
 COPY --from=dist /etc/ssl/certs/ca-certificates.crt ${SERVICE_ROOT}/etc/ssl/certs/ca-certificates.crt
 # Copy the zot binary
-COPY --from=dist /usr/local/bin/zot-linux-${TARGETARCH}-minimal ${SERVICE_ROOT}/bin/zot
+COPY --from=dist /usr/local/bin/zot-linux-${TARGETARCH} ${SERVICE_ROOT}/bin/zot

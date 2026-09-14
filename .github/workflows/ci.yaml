@@ -16,29 +16,35 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4
 
       - name: Install QEMU System Packages
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86 qemu-kvm
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
       - name: Extract Talos Version from Makefile
         id: talos-version
         run: |
           TALOS_VERSION=$(grep -E '^TALOS_VERSION \?=' Makefile | awk '{print $3}')
+          # The Makefile pins a series (v1.14); release assets are per patch.
+          TALOS_RELEASE=$(./scripts/talos-release.sh "$TALOS_VERSION")
+          echo "Talos $TALOS_VERSION resolves to release $TALOS_RELEASE"
           echo "TALOS_VERSION=$TALOS_VERSION" >> $GITHUB_ENV
-          echo "version=$TALOS_VERSION" >> $GITHUB_OUTPUT
+          # Exported so test-local.sh reuses it instead of resolving again.
+          echo "TALOS_RELEASE=$TALOS_RELEASE" >> $GITHUB_ENV
+          echo "release=$TALOS_RELEASE" >> $GITHUB_OUTPUT
 
       - name: Install talosctl
         run: |
-          curl -sLo talosctl https://github.com/siderolabs/talos/releases/download/${{ steps.talos-version.outputs.version }}/talosctl-linux-amd64
+          curl -sSfLo talosctl https://github.com/siderolabs/talos/releases/download/${{ steps.talos-version.outputs.release }}/talosctl-linux-amd64
           chmod +x talosctl
           sudo mv talosctl /usr/local/bin/
+          talosctl version --client
 
       - name: Run Local Test Script
         run: |

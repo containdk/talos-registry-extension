@@ -19,12 +19,7 @@ because it cannot pull its own required images.
 
 This project involves creating a custom Talos extension to run a container
 registry as a system service directly on the Talos nodes. The implementation
-will use the Zot minimal registry image (`ghcr.io/project-zot/zot-minimal`).
-
-*Note: We use the `zot-minimal` image because we do not need the extra Zot
-extensions. If extensions are needed, Zot should be compiled with only those
-specific extensions enabled. See the [Zot Security Posture documentation]
-(https://zotregistry.dev/v2.1.15/articles/security-posture/).*
+will use the Zot registry image (`ghcr.io/project-zot/zot`).
 
 The extension will ensure the registry is started by the Talos service manager
 (`machined`), making it independent of the Kubernetes control plane. This
