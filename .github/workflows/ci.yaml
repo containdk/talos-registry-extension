@@ -31,14 +31,20 @@ jobs:
         id: talos-version
         run: |
           TALOS_VERSION=$(grep -E '^TALOS_VERSION \?=' Makefile | awk '{print $3}')
+          # The Makefile pins a series (v1.14); release assets are per patch.
+          TALOS_RELEASE=$(./scripts/talos-release.sh "$TALOS_VERSION")
+          echo "Talos $TALOS_VERSION resolves to release $TALOS_RELEASE"
           echo "TALOS_VERSION=$TALOS_VERSION" >> $GITHUB_ENV
-          echo "version=$TALOS_VERSION" >> $GITHUB_OUTPUT
+          # Exported so test-local.sh reuses it instead of resolving again.
+          echo "TALOS_RELEASE=$TALOS_RELEASE" >> $GITHUB_ENV
+          echo "release=$TALOS_RELEASE" >> $GITHUB_OUTPUT
 
       - name: Install talosctl
         run: |
-          curl -sLo talosctl https://github.com/siderolabs/talos/releases/download/${{ steps.talos-version.outputs.version }}/talosctl-linux-amd64
+          curl -sSfLo talosctl https://github.com/siderolabs/talos/releases/download/${{ steps.talos-version.outputs.release }}/talosctl-linux-amd64
           chmod +x talosctl
           sudo mv talosctl /usr/local/bin/
+          talosctl version --client
 
       - name: Run Local Test Script
         run: |
