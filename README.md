@@ -46,7 +46,7 @@ extension.
 _Note: Replace `${TALOS_VERSION}` and `${EXTENSION_VERSION}` with the correct versions._
 
 ```sh
-docker run -t --rm -v .:/work --privileged ghcr.io/siderolabs/imager:v${TALOS_VERSION} \
+docker run -t --rm -v .:/work --privileged ghcr.io/siderolabs/imager:latest \
   installer \
   --system-extension-image ghcr.io/containdk/talos-registry-extension:${EXTENSION_VERSION}
 ```

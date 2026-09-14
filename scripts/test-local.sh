@@ -2,11 +2,37 @@
 set -euo pipefail
 
 TALOS_VERSION=${TALOS_VERSION:?TALOS_VERSION must be set}
+
+# TALOS_VERSION is a series (e.g. v1.14) so the extension isn't rebuilt for every
+# patch release, but release artifacts (UKI, ISO, ...) are published per patch.
+# Resolve the newest vX.Y.Z tag in that series unless one is given explicitly.
+if [ -z "${TALOS_RELEASE:-}" ]; then
+    if [[ "$TALOS_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+        TALOS_RELEASE="$TALOS_VERSION"
+    else
+        SERIES="${TALOS_VERSION#v}"
+        TALOS_RELEASE=$(git ls-remote --refs --tags https://github.com/siderolabs/talos.git "v${SERIES}.*" |
+            awk '{print $2}' |
+            grep -E "^refs/tags/v${SERIES//./\\.}\.[0-9]+$" |
+            sed 's|refs/tags/||' |
+            sort -V -u |
+            tail -1)
+        if [ -z "$TALOS_RELEASE" ]; then
+            echo "Could not resolve a released patch version for Talos $TALOS_VERSION"
+            exit 1
+        fi
+        echo "Resolved Talos $TALOS_VERSION to latest release $TALOS_RELEASE"
+    fi
+fi
 UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 IMAGE_URL="ttl.sh/${UUID}/talos-registry-extension"
 TAG="2h"
 CIDR=${CIDR:-192.168.1.0/24}
 ENDPOINT="${ENDPOINT:-192.168.1.2}"
+# The provisioner's own DNS forwarder on the cluster gateway does not come up on
+# macOS, leaving the node unable to resolve ttl.sh and so unable to pull the
+# installer. Hand the node resolvers it can reach through the vmnet NAT instead.
+NAMESERVERS="${NAMESERVERS:-1.1.1.1,8.8.8.8}"
 
 ARCH=$(uname -m)
 if [ "$ARCH" = "x86_64" ]; then
@@ -37,7 +63,7 @@ fi
 
 echo "==> Building custom Talos installer image with the extension"
 docker run --rm -t -v "$PWD/build:/out" \
-    ghcr.io/siderolabs/imager:$TALOS_VERSION installer \
+    ghcr.io/siderolabs/imager:$TALOS_RELEASE installer \
     --arch "$PLATARCH" \
     --system-extension-image "$IMAGE_URL:$TAG"
 
@@ -53,9 +79,10 @@ echo "===> Pushed: $INSTALLER_IMAGE"
 
 CLUSTER_NAME="reg-test"
 
+# NOTE: do not set cluster.allowSchedulingOnControlPlanes here -- Talos 1.14+
+# emits a KubeNodeConfig document carrying the control-plane taint and rejects
+# the legacy v1alpha1 field alongside it. This test never schedules a pod.
 cat <<EOF > build/patch.yaml
-cluster:
-  allowSchedulingOnControlPlanes: true
 machine:
   files:
     - op: create
@@ -87,12 +114,31 @@ configFiles:
       }
 EOF
 
+# The provisioner's processes are detached and outlive this script, so a failure
+# anywhere below would otherwise leak a running cluster. Trap from here on.
+cleanup() {
+    local rc=$?
+    if [ "${CLEANUP:-true}" = "true" ]; then
+        echo "==> Cleaning up..."
+        sudo -E talosctl cluster destroy --name "$CLUSTER_NAME" || true
+        rm -rf build/
+    else
+        echo "==> Skipping cleanup."
+        echo "To clean up manually, run:"
+        echo "  sudo talosctl cluster destroy --name $CLUSTER_NAME"
+        echo "  rm -rf build/"
+    fi
+    return $rc
+}
+trap cleanup EXIT
+
 echo "==> Creating Talos dev (QEMU) cluster ($CLUSTER_NAME)"
 sudo -E talosctl cluster create dev \
     --name "$CLUSTER_NAME" \
     --cidr "$CIDR" \
+    --nameservers "$NAMESERVERS" \
     --arch "$PLATARCH" \
-    --uki-path "https://github.com/siderolabs/talos/releases/download/${TALOS_VERSION}/metal-${PLATARCH}-uki.efi" \
+    --uki-path "https://github.com/siderolabs/talos/releases/download/${TALOS_RELEASE}/metal-${PLATARCH}-uki.efi" \
     --install-image "$INSTALLER_IMAGE" \
     --controlplanes 1 \
     --workers 0 \
@@ -126,17 +172,6 @@ else
     talosctl --talosconfig "$TALOSCONFIG" service ext-registry || true
     talosctl --talosconfig "$TALOSCONFIG" logs ext-registry || true
     exit 1
-fi
-
-if [ "${CLEANUP:-true}" = "true" ]; then
-    echo "==> Cleaning up..."
-    sudo -E talosctl cluster destroy --name "$CLUSTER_NAME"
-    rm -rf build/
-else
-    echo "==> Skipping cleanup."
-    echo "To clean up manually, run:"
-    echo "  sudo talosctl cluster destroy --name $CLUSTER_NAME"
-    echo "  rm -rf build/"
 fi
 
 echo "==> DONE"
