@@ -18,10 +18,10 @@ EOF
 # Grab the official image to cherry-pick the static binary and certificates
 FROM ghcr.io/project-zot/zot:v2.1.20@sha256:542e25be4d32e7879c0cfad93492a93c81b1e059cbd2d30d485d4bd567318234 AS dist
 
-# Get static busybox
-FROM busybox:stable-musl AS busybox
+# Get static busybox, which supervises zot and runs the health check
+FROM busybox:stable-musl@sha256:3c6ae8008e2c2eedd141725c30b20d9c36b026eb796688f88205845ef17aa213 AS busybox
 
-# Intermediate stage to normalize library paths and setup busybox/script
+# Intermediate stage to normalize library paths and assemble the service bin/
 FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS builder
 COPY --from=dist / /dist/
 RUN mkdir -p /normalized/lib /normalized/lib64 && \
@@ -35,9 +35,8 @@ RUN for tool in sh wget kill sleep echo grep sed head; do \
         ln -s busybox /rootfs/bin/$tool; \
     done
 
-# Copy and prepare the startup script
+# Copy the startup script (committed executable, so no chmod needed)
 COPY scripts/zot-start.sh /rootfs/bin/zot-start.sh
-RUN chmod +x /rootfs/bin/zot-start.sh
 
 # Final stage: image
 FROM scratch
@@ -51,7 +50,7 @@ COPY registry.yaml /rootfs/usr/local/etc/containers/registry.yaml
 # Base path for the service container
 ARG SERVICE_ROOT=/rootfs/usr/local/lib/containers/registry
 
-# Copy busybox and symlinks
+# Copy busybox, its symlinks and the startup script
 COPY --from=builder /rootfs/bin/ ${SERVICE_ROOT}/bin/
 
 # zot is dynamically linked, so we need to copy the normalized lib directories
