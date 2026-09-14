@@ -5,25 +5,11 @@ TALOS_VERSION=${TALOS_VERSION:?TALOS_VERSION must be set}
 
 # TALOS_VERSION is a series (e.g. v1.14) so the extension isn't rebuilt for every
 # patch release, but release artifacts (UKI, ISO, ...) are published per patch.
-# Resolve the newest vX.Y.Z tag in that series unless one is given explicitly.
 if [ -z "${TALOS_RELEASE:-}" ]; then
-    if [[ "$TALOS_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-        TALOS_RELEASE="$TALOS_VERSION"
-    else
-        SERIES="${TALOS_VERSION#v}"
-        TALOS_RELEASE=$(git ls-remote --refs --tags https://github.com/siderolabs/talos.git "v${SERIES}.*" |
-            awk '{print $2}' |
-            grep -E "^refs/tags/v${SERIES//./\\.}\.[0-9]+$" |
-            sed 's|refs/tags/||' |
-            sort -V -u |
-            tail -1)
-        if [ -z "$TALOS_RELEASE" ]; then
-            echo "Could not resolve a released patch version for Talos $TALOS_VERSION"
-            exit 1
-        fi
-        echo "Resolved Talos $TALOS_VERSION to latest release $TALOS_RELEASE"
-    fi
+    TALOS_RELEASE=$(SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; "$SCRIPT_DIR/talos-release.sh" "$TALOS_VERSION")
+    echo "Resolved Talos $TALOS_VERSION to latest release $TALOS_RELEASE"
 fi
+
 UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
 IMAGE_URL="ttl.sh/${UUID}/talos-registry-extension"
 TAG="2h"
