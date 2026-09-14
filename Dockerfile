@@ -18,12 +18,25 @@ EOF
 # Grab the official image to cherry-pick the static binary and certificates
 FROM ghcr.io/project-zot/zot:v2.1.20@sha256:542e25be4d32e7879c0cfad93492a93c81b1e059cbd2d30d485d4bd567318234 AS dist
 
-# Intermediate stage to normalize library paths across architectures
-FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS normalizer
+# Get static busybox, which supervises zot and runs the health check
+FROM busybox:stable-musl@sha256:3c6ae8008e2c2eedd141725c30b20d9c36b026eb796688f88205845ef17aa213 AS busybox
+
+# Intermediate stage to normalize library paths and assemble the service bin/
+FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS builder
 COPY --from=dist / /dist/
 RUN mkdir -p /normalized/lib /normalized/lib64 && \
     cp -a /dist/lib/. /normalized/lib/ && \
     if [ -d "/dist/lib64" ]; then cp -a /dist/lib64/. /normalized/lib64/; fi
+
+# Setup rootfs structure for the service
+RUN mkdir -p /rootfs/bin
+COPY --from=busybox /bin/busybox /rootfs/bin/busybox
+RUN for tool in sh wget kill sleep echo grep sed head; do \
+        ln -s busybox /rootfs/bin/$tool; \
+    done
+
+# Copy the startup script (committed executable, so no chmod needed)
+COPY scripts/zot-start.sh /rootfs/bin/zot-start.sh
 
 # Final stage: image
 FROM scratch
@@ -33,12 +46,19 @@ ARG TARGETARCH
 COPY --from=manifest /manifest.yaml /manifest.yaml
 # Copy the extension service definition
 COPY registry.yaml /rootfs/usr/local/etc/containers/registry.yaml
+
+# Base path for the service container
+ARG SERVICE_ROOT=/rootfs/usr/local/lib/containers/registry
+
+# Copy busybox, its symlinks and the startup script
+COPY --from=builder /rootfs/bin/ ${SERVICE_ROOT}/bin/
+
 # zot is dynamically linked, so we need to copy the normalized lib directories
-COPY --from=normalizer /normalized/lib/ /rootfs/usr/local/lib/containers/registry/lib/
-COPY --from=normalizer /normalized/lib64/ /rootfs/usr/local/lib/containers/registry/lib64/
+COPY --from=builder /normalized/lib/ ${SERVICE_ROOT}/lib/
+COPY --from=builder /normalized/lib64/ ${SERVICE_ROOT}/lib64/
 # Copy default zot config
-COPY --from=dist /etc/zot/config.json /rootfs/usr/local/lib/containers/registry/etc/zot/config.json
+COPY --from=dist /etc/zot/config.json ${SERVICE_ROOT}/etc/zot/config.json
 # Copy the CA certificates
-COPY --from=dist /etc/ssl/certs/ca-certificates.crt /rootfs/usr/local/lib/containers/registry/etc/ssl/certs/ca-certificates.crt
+COPY --from=dist /etc/ssl/certs/ca-certificates.crt ${SERVICE_ROOT}/etc/ssl/certs/ca-certificates.crt
 # Copy the zot binary
-COPY --from=dist /usr/local/bin/zot-linux-${TARGETARCH} /rootfs/usr/local/lib/containers/registry/bin/zot
+COPY --from=dist /usr/local/bin/zot-linux-${TARGETARCH} ${SERVICE_ROOT}/bin/zot
