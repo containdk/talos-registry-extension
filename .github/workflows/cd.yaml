@@ -1,51 +1,18 @@
 ---
-name: Renovate Auto-Publish
+name: CD
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "Makefile"
+    tags:
+      - "v*"
+  workflow_dispatch:
 
 jobs:
-  verify:
-    name: Verify TALOS_VERSION bump
-    if: github.actor == 'contain-renovate[bot]'
-    runs-on: ubuntu-latest
-    outputs:
-      proceed: ${{ steps.verify.outputs.proceed }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 2
-
-      - name: Verify Makefile exclusivity and regex
-        id: verify
-        run: |
-          # Only republish when the commit touches nothing but the pinned Talos
-          # series, so an unrelated Makefile edit never ships an image.
-          FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
-          COUNT=$(echo "$FILES" | wc -l)
-
-          # -U0 so only added/changed lines are considered
-          MATCH=$(git diff HEAD^ HEAD -U0 -- Makefile | grep "^\+" | grep -qE "TALOS_VERSION \?= .*" && echo "yes" || echo "no")
-
-          if [ "$COUNT" -eq 1 ] && [ "$FILES" = "Makefile" ] && [ "$MATCH" = "yes" ]; then
-            echo "Proceeding with publish: valid TALOS_VERSION bump detected."
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Condition failed. Count: $COUNT, Files: $FILES, Match: $MATCH"
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  publish:
-    name: Publish
-    needs: verify
-    if: needs.verify.outputs.proceed == 'true'
+  release:
+    name: Release and Publish
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       packages: write
     steps:
       - name: Checkout code
@@ -56,8 +23,8 @@ jobs:
       - name: Resolve versions
         id: vars
         run: |
-          # The app version stays at the last release tag; only the Talos
-          # series moves, giving a new <app version>-<talos series> image tag.
+          # Image tags and the extension manifest carry <app version>-<talos series>,
+          # so the Talos series comes from the Makefile rather than the git tag.
           TALOS_VERSION=$(grep -E '^TALOS_VERSION \?=' Makefile | awk '{print $3}')
           VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
           {
@@ -103,3 +70,9 @@ jobs:
             TALOS_VERSION=${{ steps.vars.outputs.talos_version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
+        with:
+          generate_release_notes: true
