@@ -1,5 +1,5 @@
 # Use a temporary alpine image to generate the manifest
-FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS manifest
+FROM alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS manifest
 ARG VERSION
 ARG TALOS_VERSION
 RUN cat > /manifest.yaml <<EOF
@@ -22,7 +22,7 @@ FROM ghcr.io/project-zot/zot:v2.1.22@sha256:96cda11459ce6f8c60da3b03f03e9f67fd11
 FROM busybox:stable-musl@sha256:3c6ae8008e2c2eedd141725c30b20d9c36b026eb796688f88205845ef17aa213 AS busybox
 
 # Intermediate stage to normalize library paths and assemble the service bin/
-FROM alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS builder
+FROM alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS builder
 COPY --from=dist / /dist/
 RUN mkdir -p /normalized/lib /normalized/lib64 && \
     cp -a /dist/lib/. /normalized/lib/ && \
