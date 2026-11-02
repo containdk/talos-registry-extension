@@ -16,7 +16,7 @@ metadata:
 EOF
 
 # Grab the official image to cherry-pick the static binary and certificates
-FROM ghcr.io/project-zot/zot:v2.1.22@sha256:96cda11459ce6f8c60da3b03f03e9f67fd11b3ae2d82c4c04c92b3c608996080 AS dist
+FROM ghcr.io/project-zot/zot:v2.1.23@sha256:9d3de83ac2099e6f4843045b4c9b65b7e8baf40f92d28f54906dee9d4d390fd7 AS dist
 
 # Get static busybox, which supervises zot and runs the health check
 FROM busybox:stable-musl@sha256:3c6ae8008e2c2eedd141725c30b20d9c36b026eb796688f88205845ef17aa213 AS busybox
